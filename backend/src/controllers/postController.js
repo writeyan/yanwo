@@ -1,0 +1,386 @@
+const Post = require('../models/Post');
+const PostLike = require('../models/PostLike');
+const PostRevision = require('../models/PostRevision');
+const PageVisit = require('../models/PageVisit');
+const slugify = require('slugify');
+const { writeAudit } = require('../utils/auditLog');
+const { refererHostFromHeader } = require('../utils/refererHost');
+
+// 后台：全部文章
+exports.getAllPostsAdmin = async (req, res) => {
+  try {
+    const posts = await Post.find()
+      .populate('author', 'username')
+      .sort({ updatedAt: -1 });
+    return res.json({ code: 200, data: { posts } });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+// 作者/用户：仅查看自己的文章（含草稿）
+exports.getMyPosts = async (req, res) => {
+  try {
+    const posts = await Post.find({ author: req.user._id })
+      .populate('author', 'username')
+      .sort({ updatedAt: -1 });
+    return res.json({ code: 200, data: { posts } });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+// 标签云（已发布文章）
+exports.getTagStats = async (req, res) => {
+  try {
+    const rows = await Post.aggregate([
+      { $match: { status: 'published' } },
+      { $unwind: { path: '$tags', preserveNullAndEmptyArrays: false } },
+      { $group: { _id: '$tags', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+    return res.json({
+      code: 200,
+      data: rows.map((r) => ({ name: r._id, count: r.count })),
+    });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+const sortFromQuery = (sortRaw) => {
+  const s = String(sortRaw || 'latest').toLowerCase();
+  if (s === 'popular') return { likeCount: -1, publishedAt: -1 };
+  if (s === 'views') return { viewCount: -1, publishedAt: -1 };
+  return { publishedAt: -1 };
+};
+
+// 获取文章列表（公开）：支持排序、关键词（全文索引 / 正则回退）、标签
+exports.getPosts = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, q, tag, sort: sortRaw } = req.query;
+    const sortOpt = sortFromQuery(sortRaw);
+    const base = { status: 'published' };
+    if (tag && String(tag).trim()) {
+      base.tags = String(tag).trim();
+    }
+
+    let query = { ...base };
+    const qTrim = q && String(q).trim() ? String(q).trim() : '';
+
+    if (qTrim) {
+      let usedText = false;
+      try {
+        const textTry = { ...base, $text: { $search: qTrim } };
+        const cnt = await Post.countDocuments(textTry);
+        if (cnt > 0) {
+          query = textTry;
+          usedText = true;
+        }
+      } catch {
+        usedText = false;
+      }
+      if (!usedText) {
+        const escaped = qTrim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rx = new RegExp(escaped, 'i');
+        query.$or = [{ title: rx }, { content: rx }, { excerpt: rx }];
+      }
+    }
+
+    const lim = Math.min(50, Math.max(1, Number(limit) || 10));
+    const pg = Math.max(1, Number(page) || 1);
+
+    const posts = await Post.find(query)
+      .populate('author', 'username')
+      .sort(sortOpt)
+      .skip((pg - 1) * lim)
+      .limit(lim);
+
+    const total = await Post.countDocuments(query);
+    res.json({
+      code: 200,
+      data: { posts, total, page: pg, pages: Math.ceil(total / lim) || 1 },
+    });
+  } catch (err) {
+    res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+/** 推荐 / 相关文章：同标签优先，其次按热度 */
+exports.getRelatedPosts = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const cur = await Post.findOne({ slug, status: 'published' }).select('tags').lean();
+    if (!cur) {
+      return res.status(404).json({ code: 404, message: '文章不存在' });
+    }
+    const tags = (cur.tags || []).filter(Boolean);
+    const filter = {
+      status: 'published',
+      _id: { $ne: cur._id },
+      ...(tags.length ? { tags: { $in: tags } } : {}),
+    };
+    let posts = await Post.find(filter)
+      .populate('author', 'username')
+      .sort({ likeCount: -1, viewCount: -1, publishedAt: -1 })
+      .limit(6)
+      .lean();
+
+    if (posts.length < 3 && tags.length) {
+      posts = await Post.find({ status: 'published', _id: { $ne: cur._id } })
+        .populate('author', 'username')
+        .sort({ publishedAt: -1 })
+        .limit(6)
+        .lean();
+    }
+
+    return res.json({ code: 200, data: { posts } });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+/** 文章修订历史（作者或管理员） */
+exports.getPostRevisions = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    if (!postId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ code: 400, message: '无效的文章 ID' });
+    }
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ code: 404, message: '文章不存在' });
+    }
+    const isOwner = String(post.author) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ code: 403, message: '无权查看修订记录' });
+    }
+    const revisions = await PostRevision.find({ post: postId })
+      .sort({ createdAt: -1 })
+      .limit(40)
+      .populate('editedBy', 'username')
+      .lean();
+    return res.json({ code: 200, data: { revisions } });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+// 归档：仅返回基础信息并按年月分组
+exports.getArchive = async (req, res) => {
+  try {
+    const posts = await Post.find({ status: 'published' })
+      .select('title slug authorName publishedAt viewCount likeCount commentCount createdAt')
+      .sort({ publishedAt: -1, createdAt: -1 })
+      .lean();
+
+    const groups = {};
+    posts.forEach((p) => {
+      const d = p.publishedAt || p.createdAt;
+      const year = d ? new Date(d).getFullYear() : '未知';
+      const month = d ? String(new Date(d).getMonth() + 1).padStart(2, '0') : '00';
+      const key = `${year}-${month}`;
+      if (!groups[key]) {
+        groups[key] = { key, year: Number(year) || 0, month, posts: [] };
+      }
+      groups[key].posts.push({
+        _id: p._id,
+        title: p.title,
+        slug: p.slug,
+        authorName: p.authorName,
+        publishedAt: p.publishedAt || p.createdAt,
+        viewCount: p.viewCount || 0,
+        likeCount: p.likeCount || 0,
+        commentCount: p.commentCount || 0,
+      });
+    });
+
+    const archive = Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
+    return res.json({ code: 200, data: { archive, total: posts.length } });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+// 获取单篇文章（公开，增加阅读量）；若有登录态则返回是否已点赞
+exports.getPostBySlug = async (req, res) => {
+  try {
+    const post = await Post.findOne({ slug: req.params.slug, status: 'published' }).populate(
+      'author',
+      'username'
+    );
+    if (!post) return res.status(404).json({ code: 404, message: '文章不存在' });
+    post.viewCount += 1;
+    await post.save();
+    const obj = post.toObject ? post.toObject() : post;
+    let likedByMe = false;
+    if (req.user) {
+      const like = await PostLike.findOne({ post: post._id, user: req.user._id }).lean();
+      likedByMe = !!like;
+    }
+    obj.likedByMe = likedByMe;
+    obj.likeCount = obj.likeCount ?? 0;
+
+    const ref =
+      typeof req.get === 'function' ? req.get('referer') || req.get('referrer') || '' : '';
+    const refStr = String(ref).slice(0, 1000);
+    setImmediate(() => {
+      PageVisit.create({
+        path: `/post/${req.params.slug}`,
+        referer: refStr,
+        refererHost: refererHostFromHeader(refStr),
+        post: post._id,
+      }).catch(() => {});
+    });
+
+    res.json({ code: 200, data: obj });
+  } catch (err) {
+    res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+// 需要登录：作者本人或管理员可按 ID 查看（含草稿）
+exports.getPostById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ code: 400, message: '无效的文章 ID' });
+    }
+    const post = await Post.findById(id).populate('author', 'username');
+    if (!post) return res.status(404).json({ code: 404, message: '文章不存在' });
+    const isOwner = String(post.author?._id || post.author) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ code: 403, message: '无权查看该文章' });
+    }
+    return res.json({ code: 200, data: post });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+// 创建文章（需要登录）
+exports.createPost = async (req, res) => {
+  try {
+    const { title, content, category, tags, status, featuredImage } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ code: 400, message: '标题和内容不能为空' });
+    }
+    let slugBase = slugify(String(title), { lower: true, strict: true }).trim();
+    if (!slugBase) {
+      slugBase = `post-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    }
+    let slug = slugBase;
+    let n = 1;
+    while (await Post.findOne({ slug })) {
+      slug = `${slugBase}-${n++}`;
+    }
+    const post = await Post.create({
+      title,
+      slug,
+      content,
+      author: req.user._id,
+      authorName: req.user.username,
+      category,
+      tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map((t) => t.trim())) : [],
+      status: status || 'published',
+      featuredImage,
+      publishedAt: status === 'published' ? Date.now() : null,
+    });
+    res.status(201).json({ code: 201, data: post });
+  } catch (err) {
+    res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+exports.updatePost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ code: 400, message: '无效的文章 ID' });
+    }
+    const post = await Post.findById(id);
+    if (!post) {
+      return res.status(404).json({ code: 404, message: '文章不存在' });
+    }
+    const isOwner = String(post.author) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ code: 403, message: '无权编辑' });
+    }
+
+    const { title, content, category, tags, status, featuredImage } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ code: 400, message: '标题和内容不能为空' });
+    }
+
+    await PostRevision.create({
+      post: post._id,
+      title: post.title,
+      content: post.content,
+      editedBy: req.user._id,
+      editedByName: req.user.username || '',
+    });
+
+    const nextTitle = String(title).trim();
+    if (nextTitle !== post.title) {
+      let slugBase = slugify(nextTitle, { lower: true, strict: true }).trim();
+      if (!slugBase) {
+        slugBase = `post-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      }
+      let slug = slugBase;
+      let n = 1;
+      while (await Post.findOne({ slug, _id: { $ne: post._id } })) {
+        slug = `${slugBase}-${n++}`;
+      }
+      post.slug = slug;
+    }
+
+    const oldStatus = post.status;
+    post.title = nextTitle;
+    post.content = String(content);
+    post.category = category || undefined;
+    post.tags = tags
+      ? (Array.isArray(tags) ? tags : String(tags).split(',').map((t) => t.trim()).filter(Boolean))
+      : [];
+    post.status = status || post.status;
+    post.featuredImage = featuredImage || undefined;
+    if (oldStatus !== 'published' && post.status === 'published') {
+      post.publishedAt = Date.now();
+    }
+    await post.save();
+
+    return res.json({ code: 200, message: '更新成功', data: post });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+exports.deletePost = async (req, res) => {
+  try {
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ code: 400, message: '无效的文章 ID' });
+    }
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ code: 404, message: '文章不存在' });
+    }
+    if (post.author.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ code: 403, message: '无权删除' });
+    }
+    post.status = 'deleted';
+    await post.save();
+    await writeAudit({
+      user: req.user._id,
+      action: 'post.soft_delete',
+      resourceType: 'post',
+      resourceId: String(post._id),
+      meta: { slug: post.slug, title: post.title },
+      req,
+    });
+    return res.json({ code: 200, message: '已删除' });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
