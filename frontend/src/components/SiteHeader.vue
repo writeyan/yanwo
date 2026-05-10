@@ -116,7 +116,9 @@ const onSearch = () => {
   const query = {}
   if (q) query.q = q
   if (route.query.tag) query.tag = String(route.query.tag)
-  if (Object.keys(query).length === 0) {
+  if (route.query.category) query.category = String(route.query.category)
+  if (route.query.sort) query.sort = String(route.query.sort)
+  if (!query.q && !query.tag && !query.category && !query.sort) {
     router.push({ path: '/' })
     return
   }

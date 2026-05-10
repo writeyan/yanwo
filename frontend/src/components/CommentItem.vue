@@ -101,6 +101,7 @@ watch(
 const formatTime = (d) => (d ? new Date(d).toLocaleString() : '—')
 
 const submitReply = () => {
+  if (props.replyPending === props.node._id) return
   const text = localReply.value.trim()
   if (!text) return
   emit('submit-reply', { parentId: props.node._id, content: text })

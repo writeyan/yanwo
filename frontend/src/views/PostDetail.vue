@@ -23,6 +23,11 @@
             <button type="button" class="btn btn-ghost btn-sm" @click="copyLink">复制链接</button>
           </div>
           <p v-if="copyOk" class="copy-ok" role="status">已复制当前链接到剪贴板</p>
+          <div v-if="post.category?.name" class="post-category">
+            <router-link class="post-category__link" :to="{ path: '/', query: { category: post.category.slug } }">
+              分类 · {{ post.category.name }}
+            </router-link>
+          </div>
           <div v-if="post.tags?.length" class="post-header__tags">
             <router-link
               v-for="t in post.tags"
@@ -290,6 +295,19 @@ const onPostLike = async () => {
 .post-header__meta .by {
   font-weight: 600;
   color: #3d3d45;
+}
+.post-category {
+  margin: 0.35rem 0 0.5rem;
+}
+.post-category__link {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.post-category__link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
 }
 .post-header__tags {
   display: flex;

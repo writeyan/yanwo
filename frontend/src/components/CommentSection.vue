@@ -219,7 +219,7 @@ const onReport = async (id) => {
 }
 
 const submitTopComment = async () => {
-  if (!postId.value) return
+  if (!postId.value || topSending.value) return
   topSending.value = true
   errorMsg.value = ''
   message.value = ''
@@ -249,7 +249,7 @@ const onReply = (id) => {
 }
 
 const handleSubmitReply = async ({ parentId, content: text }) => {
-  if (!postId.value || !text) return
+  if (!postId.value || !text || replyPending.value) return
   replyPending.value = parentId
   errorMsg.value = ''
   message.value = ''

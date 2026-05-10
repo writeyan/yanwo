@@ -19,18 +19,27 @@
         >文章管理</router-link
         >
         <router-link
+          to="/admin/categories"
+          class="admin-nav__item"
+          active-class="admin-nav__item--active"
+        >分类</router-link
+        >
+        <router-link
           to="/admin/comments"
           class="admin-nav__item"
           active-class="admin-nav__item--active"
         >评论审核</router-link
         >
+        <router-link
+          to="/admin/users"
+          class="admin-nav__item"
+          active-class="admin-nav__item--active"
+        >用户</router-link
+        >
       </nav>
-      <router-link to="/" class="admin-layout__front">← 回首页</router-link>
     </aside>
     <div class="admin-layout__main">
-      <header class="admin-layout__main-head">
-        <router-link to="/" class="btn btn-primary admin-layout__home-btn">← 回首页</router-link>
-      </header>
+      <router-link to="/" class="btn btn-primary admin-layout__home-btn">← 回首页</router-link>
       <router-view />
     </div>
   </div>
@@ -40,11 +49,17 @@
 .admin-layout {
   display: flex;
   min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #eef0ec;
 }
 .admin-layout__aside {
   width: 220px;
   flex-shrink: 0;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
   background: #1a1f1c;
   color: #e4e6e2;
   padding: 1.5rem 0 1rem;
@@ -89,43 +104,21 @@
   background: rgba(90, 143, 123, 0.12);
   border-left-color: #5a8f7b;
 }
-.admin-layout__front {
-  margin-top: auto;
-  margin-left: 1.1rem;
-  margin-right: 1.1rem;
-  padding: 0.55rem 0.85rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-align: center;
-  text-decoration: none;
-  color: #1a1f1c;
-  background: linear-gradient(180deg, #f4f6f2 0%, #e4e8e0 100%);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
-  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
-}
-.admin-layout__front:hover {
-  color: #1a1f1c;
-  background: #fff;
-  border-color: #c45c3e;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
-}
 .admin-layout__main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   padding: 1.25rem 1.75rem 2.5rem;
+  padding-top: 4rem;
   overflow-x: auto;
-}
-.admin-layout__main-head {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-bottom: 0.65rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid var(--color-border);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .admin-layout__home-btn {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.75rem;
+  z-index: 100;
   text-decoration: none;
   font-weight: 600;
   padding: 0.5rem 1.2rem;
@@ -138,9 +131,18 @@
 @media (max-width: 768px) {
   .admin-layout {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
   .admin-layout__aside {
     width: 100%;
+    height: auto;
+    align-self: stretch;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 40;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
@@ -160,12 +162,16 @@
     border-bottom-color: #5a8f7b;
     border-left-color: transparent;
   }
-  .admin-layout__front {
-    margin-top: 0;
-    margin-left: 0;
-    margin-right: 0;
-    width: 100%;
-    max-width: 12rem;
+  .admin-layout__main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-top: 3.5rem;
+  }
+  .admin-layout__home-btn {
+    top: 1rem;
+    right: 1rem;
   }
 }
 </style>

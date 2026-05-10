@@ -12,6 +12,8 @@ const authRoutes = require('./routes/authRoutes');
 const postRoutes = require('./routes/postRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const userAdminRoutes = require('./routes/userAdminRoutes');
 
 dotenv.config();
 const app = express();
@@ -30,6 +32,8 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/posts', postRoutes);
 app.use('/api/v1/comments', commentRoutes);
 app.use('/api/v1/stats', statsRoutes);
+app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/users', userAdminRoutes);
 
 // 可选测试路由（放后面）
 app.get('/test', (req, res) => res.send('app root test'));

@@ -15,9 +15,12 @@ import Archive from '../views/Archive.vue'
 import UserProfile from '../views/UserProfile.vue'
 import Login from '../views/login.vue'
 import Register from '../views/Register.vue'
+import ForgotPassword from '../views/ForgotPassword.vue'
 import Dashboard from '../views/admin/Dashboard.vue'
 import PostManage from '../views/admin/PostManage.vue'
 import CommentReview from '../views/admin/CommentReview.vue'
+import CategoriesManage from '../views/admin/CategoriesManage.vue'
+import UserManage from '../views/admin/UserManage.vue'
 import { useUserStore } from '../store/user'
 
 const routes = [
@@ -30,6 +33,11 @@ const routes = [
     path: '/register',
     component: AuthLayout,
     children: [{ path: '', name: 'register', component: Register }],
+  },
+  {
+    path: '/forgot-password',
+    component: AuthLayout,
+    children: [{ path: '', name: 'forgot-password', component: ForgotPassword }],
   },
   {
     path: '/',
@@ -52,7 +60,9 @@ const routes = [
     children: [
       { path: 'dashboard', name: 'admin-dashboard', component: Dashboard },
       { path: 'posts', name: 'admin-posts', component: PostManage },
+      { path: 'categories', name: 'admin-categories', component: CategoriesManage },
       { path: 'comments', name: 'admin-comments', component: CommentReview },
+      { path: 'users', name: 'admin-users', component: UserManage },
     ],
   },
 ]

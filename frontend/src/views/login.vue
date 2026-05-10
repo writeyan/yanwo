@@ -3,6 +3,7 @@
     <h2 class="auth-card__title">欢迎回来</h2>
     <p class="auth-card__sub">使用邮箱或用户名登录到燕窝</p>
     <p v-if="justRegistered" class="auth-ok" role="status">注册成功，请登录</p>
+    <p v-else-if="resetOk" class="auth-ok" role="status">密码已重置，请使用新密码登录</p>
     <form @submit.prevent="handleLogin" class="auth-form" novalidate>
       <div class="form-line">
         <label class="label" for="id">邮箱 / 用户名</label>
@@ -31,6 +32,9 @@
         {{ loading ? '登录中…' : '登录' }}
       </button>
     </form>
+    <p class="auth-forgot">
+      <router-link to="/forgot-password">忘记密码？</router-link>
+    </p>
     <p class="auth-link-bottom">
       还没有账号？<router-link to="/register">注册一个</router-link>
     </p>
@@ -50,8 +54,13 @@ const form = reactive({ usernameOrEmail: '', password: '' })
 const loading = ref(false)
 const errorMsg = ref('')
 const justRegistered = computed(() => route.query.registered === '1')
+const resetOk = computed(() => route.query.reset === '1')
 
 const handleLogin = async () => {
+  if (!form.usernameOrEmail.trim() || !form.password) {
+    errorMsg.value = '请填写账号与密码'
+    return
+  }
   loading.value = true
   errorMsg.value = ''
   try {
@@ -111,6 +120,15 @@ const handleLogin = async () => {
   text-align: center;
   margin: 0.2rem 0 0.5rem;
   line-height: 1.4;
+}
+.auth-forgot {
+  text-align: right;
+  margin: -0.2rem 0 0.5rem;
+  font-size: 0.88rem;
+}
+.auth-forgot a {
+  color: var(--color-primary);
+  font-weight: 500;
 }
 .auth-link-bottom {
   text-align: center;

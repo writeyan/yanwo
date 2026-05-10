@@ -6,10 +6,16 @@ export const getRelatedPosts = (slug) => request.get(`/posts/related/${encodeURI
 export const getPostRevisions = (postId) => request.get(`/posts/revisions/${postId}`)
 export const getArchive = () => request.get('/posts/archive')
 export const getTagStats = () => request.get('/posts/meta/tags')
-export const getAdminPosts = () => request.get('/posts/admin/all')
+export const getAdminPosts = (params) => request.get('/posts/admin/all', { params })
 export const getMyPosts = () => request.get('/posts/mine')
 export const getPostBySlug = (slug) => request.get(`/posts/${slug}`)
 export const getPostByIdForEdit = (id) => request.get(`/posts/${id}/edit`)
+export const uploadPostCover = (file) => {
+  const fd = new FormData()
+  fd.append('cover', file)
+  return request.post('/posts/upload-cover', fd)
+}
+
 export const createPost = (data) => request.post('/posts', data)
 export const updatePost = (id, data) => request.put(`/posts/${id}`, data)
 export const deletePost = (id) => request.delete(`/posts/${id}`)

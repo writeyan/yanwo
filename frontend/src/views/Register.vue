@@ -38,6 +38,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerApi } from '../api/auth'
+import { validateEmail, validatePasswordClient, validateUsername } from '../utils/formValidators'
 
 const router = useRouter()
 const form = reactive({ username: '', email: '', password: '' })
@@ -47,8 +48,30 @@ const errorMsg = ref('')
 const handleRegister = async () => {
   loading.value = true
   errorMsg.value = ''
+  const u = validateUsername(form.username)
+  if (!u.ok) {
+    errorMsg.value = u.message
+    loading.value = false
+    return
+  }
+  const em = validateEmail(form.email)
+  if (!em.ok) {
+    errorMsg.value = em.message
+    loading.value = false
+    return
+  }
+  const pw = validatePasswordClient(form.password)
+  if (!pw.ok) {
+    errorMsg.value = pw.message
+    loading.value = false
+    return
+  }
   try {
-    const res = await registerApi(form)
+    const res = await registerApi({
+      username: form.username.trim(),
+      email: form.email.trim(),
+      password: form.password,
+    })
     if (res.data.code === 201) {
       router.push({ path: '/login', query: { registered: '1' } })
     } else {

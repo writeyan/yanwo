@@ -100,7 +100,14 @@
 
           <label class="label" for="avatar">头像 URL（可选）</label>
 
-          <input id="avatar" v-model="form.avatar" class="input-text" type="url" placeholder="https://..." />
+          <input
+            id="avatar"
+            v-model="form.avatar"
+            class="input-text"
+            type="text"
+            autocomplete="off"
+            placeholder="选填：https://… 或本站路径 /uploads/avatars/…"
+          />
 
         </div>
 
@@ -189,6 +196,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useUserStore } from '../store/user'
 
 import { getProfileApi, updateProfileApi, changePasswordApi, uploadAvatarApi } from '../api/auth'
+import { validatePasswordClient } from '../utils/formValidators'
 
 
 
@@ -331,35 +339,31 @@ const onAvatarFile = async (e) => {
 
 
 const submitPassword = async () => {
-
   pwdMsg.value = ''
-
-  pwdSaving.value = true
-
-  try {
-
-    await changePasswordApi({ currentPassword: pwd.current, newPassword: pwd.next })
-
-    pwd.current = ''
-
-    pwd.next = ''
-
-    pwdMsg.value = '密码已更新'
-
-    pwdOk.value = true
-
-  } catch (e) {
-
-    pwdMsg.value = e.response?.data?.message || '修改失败'
-
+  const chk = validatePasswordClient(pwd.next)
+  if (!pwd.current) {
+    pwdMsg.value = '请填写当前密码'
     pwdOk.value = false
-
-  } finally {
-
-    pwdSaving.value = false
-
+    return
   }
-
+  if (!chk.ok) {
+    pwdMsg.value = chk.message
+    pwdOk.value = false
+    return
+  }
+  pwdSaving.value = true
+  try {
+    await changePasswordApi({ currentPassword: pwd.current, newPassword: pwd.next })
+    pwd.current = ''
+    pwd.next = ''
+    pwdMsg.value = '密码已更新'
+    pwdOk.value = true
+  } catch (e) {
+    pwdMsg.value = e.response?.data?.message || '修改失败'
+    pwdOk.value = false
+  } finally {
+    pwdSaving.value = false
+  }
 }
 
 

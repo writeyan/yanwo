@@ -3,7 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY . .
-RUN mkdir -p uploads/avatars
+RUN mkdir -p uploads/avatars uploads/featured
 ENV NODE_ENV=production
 EXPOSE 5000
 CMD ["node", "src/server.js"]

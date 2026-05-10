@@ -15,6 +15,11 @@
     </section>
 
     <div class="home-toolbar">
+      <label class="home-toolbar__label" for="cat-select">分类</label>
+      <select id="cat-select" v-model="categorySelect" class="input-text home-toolbar__select home-toolbar__select--cat" @change="onCategoryChange">
+        <option value="">全部分类</option>
+        <option v-for="c in categories" :key="c._id" :value="c.slug">{{ c.name }}</option>
+      </select>
       <label class="home-toolbar__label" for="sort-select">排序</label>
       <select id="sort-select" v-model="sortSelect" class="input-text home-toolbar__select" @change="onSortChange">
         <option value="latest">最新发布</option>
@@ -28,6 +33,7 @@
       <span v-if="activeQ" class="filter-chip"
         >关键词「<strong>{{ activeQ }}</strong>」</span
       >
+      <span v-if="activeCatName" class="filter-chip">分类 <strong>{{ activeCatName }}</strong></span>
       <span v-if="activeTag" class="filter-chip"
         >标签 <strong>#{{ activeTag }}</strong></span
       >
@@ -42,7 +48,7 @@
       </div>
     </div>
 
-    <p v-else-if="!posts.length" class="empty-state">没有符合条件的文章，试试更换关键词或标签。</p>
+    <p v-else-if="!posts.length" class="empty-state">没有符合条件的文章，试试更换关键词、分类或标签。</p>
 
     <div v-else class="post-list">
       <article
@@ -60,6 +66,7 @@
           </h2>
           <p class="post-card__meta">
             <span>{{ post.authorName }}</span>
+            <span v-if="post.category?.name">· {{ post.category.name }}</span>
             <span>·</span>
             <time :datetime="post.publishedAt">{{ formatDate(post.publishedAt) }}</time>
             <span>·</span>
@@ -107,6 +114,7 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPosts } from '../api/post'
+import { getCategories } from '../api/category'
 
 const route = useRoute()
 const router = useRouter()
@@ -115,16 +123,29 @@ const page = ref(1)
 const totalPages = ref(1)
 const loading = ref(true)
 const heroQ = ref('')
+const categories = ref([])
+const categorySelect = ref('')
 
 const activeQ = computed(() => (route.query.q ? String(route.query.q) : ''))
 const activeTag = computed(() => (route.query.tag ? String(route.query.tag) : ''))
+const activeCategorySlug = computed(() =>
+  route.query.category ? String(route.query.category).trim() : ''
+)
+
+const activeCatName = computed(() => {
+  const slug = activeCategorySlug.value
+  if (!slug) return ''
+  const hit = categories.value.find((c) => c.slug === slug)
+  return hit ? hit.name : slug
+})
+
 const activeSort = computed(() => {
   const s = route.query.sort ? String(route.query.sort) : 'latest'
   if (['popular', 'views'].includes(s)) return s
   return 'latest'
 })
 const sortSelect = ref('latest')
-const hasFilters = computed(() => !!activeQ.value || !!activeTag.value)
+const hasFilters = computed(() => !!activeQ.value || !!activeTag.value || !!activeCategorySlug.value)
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString() : '—')
 const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, '')
@@ -132,6 +153,12 @@ const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, '')
 const excerptText = (post) => {
   const raw = post.excerpt || stripHtml(post.content) || ''
   return raw.length > 160 ? `${raw.slice(0, 160)}…` : raw
+}
+
+const syncToolbarFromRoute = () => {
+  heroQ.value = activeQ.value
+  sortSelect.value = activeSort.value
+  categorySelect.value = activeCategorySlug.value || ''
 }
 
 const fetchPosts = async () => {
@@ -142,6 +169,7 @@ const fetchPosts = async () => {
       limit: 10,
       q: activeQ.value || undefined,
       tag: activeTag.value || undefined,
+      category: activeCategorySlug.value || undefined,
       sort: activeSort.value,
     })
     posts.value = res.data.data.posts
@@ -160,18 +188,29 @@ const onSortChange = () => {
   router.push({ path: '/', query: q })
 }
 
-onMounted(() => {
-  heroQ.value = activeQ.value
-  sortSelect.value = activeSort.value
+const onCategoryChange = () => {
+  const q = { ...route.query }
+  if (categorySelect.value) q.category = categorySelect.value
+  else delete q.category
+  router.push({ path: '/', query: q })
+}
+
+onMounted(async () => {
+  try {
+    const res = await getCategories()
+    categories.value = res.data.data || []
+  } catch {
+    categories.value = []
+  }
+  syncToolbarFromRoute()
   fetchPosts()
 })
 
 watch(
-  () => [route.query.q, route.query.tag, route.query.sort],
+  () => [route.query.q, route.query.tag, route.query.sort, route.query.category],
   () => {
     page.value = 1
-    heroQ.value = activeQ.value
-    sortSelect.value = activeSort.value
+    syncToolbarFromRoute()
     fetchPosts()
   }
 )
@@ -183,28 +222,30 @@ const changePage = (n) => {
 }
 
 const onHeroSearch = () => {
-  const q = heroQ.value.trim()
-  const qy = {}
-  if (q) qy.q = q
-  if (activeTag.value) qy.tag = activeTag.value
-  if (activeSort.value !== 'latest') qy.sort = activeSort.value
-  if (!q && !activeTag.value) {
-    router.push({ path: '/', query: activeSort.value !== 'latest' ? { sort: activeSort.value } : {} })
-    return
-  }
-  router.push({ path: '/', query: Object.keys(qy).length ? qy : {} })
+  const qtrim = heroQ.value.trim()
+  const q = { ...route.query }
+  if (qtrim) q.q = qtrim
+  else delete q.q
+  if (route.query.tag) q.tag = String(route.query.tag)
+  if (route.query.category) q.category = String(route.query.category)
+  if (activeSort.value !== 'latest') q.sort = activeSort.value
+  router.push({ path: '/', query: q })
 }
 
 const goTag = (t) => {
   const qy = { tag: t }
   if (activeQ.value) qy.q = activeQ.value
+  if (activeCategorySlug.value) qy.category = activeCategorySlug.value
   if (activeSort.value !== 'latest') qy.sort = activeSort.value
   router.push({ path: '/', query: qy })
 }
 
 const clearFilters = () => {
   heroQ.value = ''
-  router.push({ path: '/', query: activeSort.value !== 'latest' ? { sort: activeSort.value } : {} })
+  categorySelect.value = ''
+  const q = {}
+  if (activeSort.value !== 'latest') q.sort = activeSort.value
+  router.push({ path: '/', query: Object.keys(q).length ? q : {} })
 }
 </script>
 
@@ -247,6 +288,9 @@ const clearFilters = () => {
   max-width: 11rem;
   padding: 0.35rem 0.6rem;
   font-size: 0.9rem;
+}
+.home-toolbar__select--cat {
+  max-width: 14rem;
 }
 .home-hero__lead {
   color: var(--color-ink-muted);

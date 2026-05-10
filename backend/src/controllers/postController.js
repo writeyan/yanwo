@@ -1,3 +1,4 @@
+const Category = require('../models/Category');
 const Post = require('../models/Post');
 const PostLike = require('../models/PostLike');
 const PostRevision = require('../models/PostRevision');
@@ -6,11 +7,28 @@ const slugify = require('slugify');
 const { writeAudit } = require('../utils/auditLog');
 const { refererHostFromHeader } = require('../utils/refererHost');
 
-// 后台：全部文章
+/** @returns {{ id?: import('mongoose').Types.ObjectId, err?: string }} */
+async function normalizeCategoryRef(categoryField) {
+  if (categoryField === undefined || categoryField === null) return {};
+  const s = String(categoryField).trim();
+  if (!s) return { id: undefined };
+  if (!/^[0-9a-fA-F]{24}$/.test(s)) return { err: '无效的分类 ID' };
+  const c = await Category.findById(s).select('_id');
+  if (!c) return { err: '分类不存在' };
+  return { id: c._id };
+}
+
+// 后台：全部文章（可选 ?status=published|draft|deleted）
 exports.getAllPostsAdmin = async (req, res) => {
   try {
-    const posts = await Post.find()
+    const raw = req.query.status && String(req.query.status).trim();
+    const filter = {};
+    if (raw && ['draft', 'published', 'deleted'].includes(raw)) {
+      filter.status = raw;
+    }
+    const posts = await Post.find(filter)
       .populate('author', 'username')
+      .populate('category', 'name slug')
       .sort({ updatedAt: -1 });
     return res.json({ code: 200, data: { posts } });
   } catch (err) {
@@ -23,6 +41,7 @@ exports.getMyPosts = async (req, res) => {
   try {
     const posts = await Post.find({ author: req.user._id })
       .populate('author', 'username')
+      .populate('category', 'name slug')
       .sort({ updatedAt: -1 });
     return res.json({ code: 200, data: { posts } });
   } catch (err) {
@@ -58,11 +77,26 @@ const sortFromQuery = (sortRaw) => {
 // 获取文章列表（公开）：支持排序、关键词（全文索引 / 正则回退）、标签
 exports.getPosts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, q, tag, sort: sortRaw } = req.query;
+    const { page = 1, limit = 10, q, tag, category: catParam, sort: sortRaw } = req.query;
     const sortOpt = sortFromQuery(sortRaw);
     const base = { status: 'published' };
     if (tag && String(tag).trim()) {
       base.tags = String(tag).trim();
+    }
+
+    let categoryId = null;
+    if (catParam && String(catParam).trim()) {
+      const c = await Category.findOne({
+        slug: String(catParam).trim(),
+      }).select('_id');
+      if (!c) {
+        return res.json({
+          code: 200,
+          data: { posts: [], total: 0, page: 1, pages: 1 },
+        });
+      }
+      categoryId = c._id;
+      base.category = categoryId;
     }
 
     let query = { ...base };
@@ -92,6 +126,7 @@ exports.getPosts = async (req, res) => {
 
     const posts = await Post.find(query)
       .populate('author', 'username')
+      .populate('category', 'name slug')
       .sort(sortOpt)
       .skip((pg - 1) * lim)
       .limit(lim);
@@ -175,29 +210,48 @@ exports.getArchive = async (req, res) => {
       .sort({ publishedAt: -1, createdAt: -1 })
       .lean();
 
+    /** 按月分组（保留字段，前台可改用 byYear） */
     const groups = {};
+    /** 按年分组（仅年份，满足简化归档需求） */
+    const yearMap = {};
+    const pushItem = (p) => ({
+      _id: p._id,
+      title: p.title,
+      slug: p.slug,
+      authorName: p.authorName,
+      publishedAt: p.publishedAt || p.createdAt,
+      viewCount: p.viewCount || 0,
+      likeCount: p.likeCount || 0,
+      commentCount: p.commentCount || 0,
+    });
+
     posts.forEach((p) => {
       const d = p.publishedAt || p.createdAt;
-      const year = d ? new Date(d).getFullYear() : '未知';
+      const yearNum = d ? new Date(d).getFullYear() : null;
+      const yearLabel = yearNum != null ? yearNum : '未知';
       const month = d ? String(new Date(d).getMonth() + 1).padStart(2, '0') : '00';
-      const key = `${year}-${month}`;
+      const key = `${yearLabel}-${month}`;
       if (!groups[key]) {
-        groups[key] = { key, year: Number(year) || 0, month, posts: [] };
+        groups[key] = { key, year: typeof yearNum === 'number' ? yearNum : 0, month, posts: [] };
       }
-      groups[key].posts.push({
-        _id: p._id,
-        title: p.title,
-        slug: p.slug,
-        authorName: p.authorName,
-        publishedAt: p.publishedAt || p.createdAt,
-        viewCount: p.viewCount || 0,
-        likeCount: p.likeCount || 0,
-        commentCount: p.commentCount || 0,
-      });
+      groups[key].posts.push(pushItem(p));
+
+      const yKey = String(yearLabel);
+      if (!yearMap[yKey]) {
+        yearMap[yKey] = { year: yKey, posts: [] };
+      }
+      yearMap[yKey].posts.push(pushItem(p));
     });
 
     const archive = Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
-    return res.json({ code: 200, data: { archive, total: posts.length } });
+
+    const byYear = Object.values(yearMap).sort((a, b) => {
+      if (a.year === '未知') return 1;
+      if (b.year === '未知') return -1;
+      return Number(b.year) - Number(a.year);
+    });
+
+    return res.json({ code: 200, data: { byYear, archive, total: posts.length } });
   } catch (err) {
     return res.status(500).json({ code: 500, message: err.message });
   }
@@ -206,10 +260,9 @@ exports.getArchive = async (req, res) => {
 // 获取单篇文章（公开，增加阅读量）；若有登录态则返回是否已点赞
 exports.getPostBySlug = async (req, res) => {
   try {
-    const post = await Post.findOne({ slug: req.params.slug, status: 'published' }).populate(
-      'author',
-      'username'
-    );
+    const post = await Post.findOne({ slug: req.params.slug, status: 'published' })
+      .populate('author', 'username')
+      .populate('category', 'name slug description');
     if (!post) return res.status(404).json({ code: 404, message: '文章不存在' });
     post.viewCount += 1;
     await post.save();
@@ -247,7 +300,7 @@ exports.getPostById = async (req, res) => {
     if (!id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({ code: 400, message: '无效的文章 ID' });
     }
-    const post = await Post.findById(id).populate('author', 'username');
+    const post = await Post.findById(id).populate('author', 'username').populate('category', 'name slug');
     if (!post) return res.status(404).json({ code: 404, message: '文章不存在' });
     const isOwner = String(post.author?._id || post.author) === String(req.user._id);
     const isAdmin = req.user.role === 'admin';
@@ -276,17 +329,25 @@ exports.createPost = async (req, res) => {
     while (await Post.findOne({ slug })) {
       slug = `${slugBase}-${n++}`;
     }
+    let categoryRef = undefined;
+    const catResolved = await normalizeCategoryRef(category);
+    if (catResolved.err) {
+      return res.status(400).json({ code: 400, message: catResolved.err });
+    }
+    if (catResolved.id !== undefined) categoryRef = catResolved.id;
+
+    const st = status || 'published';
     const post = await Post.create({
       title,
       slug,
       content,
       author: req.user._id,
       authorName: req.user.username,
-      category,
+      category: categoryRef,
       tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map((t) => t.trim())) : [],
-      status: status || 'published',
+      status: st,
       featuredImage,
-      publishedAt: status === 'published' ? Date.now() : null,
+      publishedAt: st === 'published' ? Date.now() : null,
     });
     res.status(201).json({ code: 201, data: post });
   } catch (err) {
@@ -340,7 +401,17 @@ exports.updatePost = async (req, res) => {
     const oldStatus = post.status;
     post.title = nextTitle;
     post.content = String(content);
-    post.category = category || undefined;
+    if ('category' in req.body) {
+      if (category === null || category === undefined || String(category).trim() === '') {
+        post.category = undefined;
+      } else {
+        const catResolved = await normalizeCategoryRef(category);
+        if (catResolved.err) {
+          return res.status(400).json({ code: 400, message: catResolved.err });
+        }
+        post.category = catResolved.id;
+      }
+    }
     post.tags = tags
       ? (Array.isArray(tags) ? tags : String(tags).split(',').map((t) => t.trim()).filter(Boolean))
       : [];
@@ -352,6 +423,19 @@ exports.updatePost = async (req, res) => {
     await post.save();
 
     return res.json({ code: 200, message: '更新成功', data: post });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: err.message });
+  }
+};
+
+/** 上传文章封面图（仅路径，保存文章时写入 featuredImage） */
+exports.uploadFeaturedCover = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ code: 400, message: '请选择图片文件' });
+    }
+    const publicPath = `/uploads/featured/${req.file.filename}`;
+    return res.json({ code: 200, message: '封面已上传', data: { featuredImage: publicPath } });
   } catch (err) {
     return res.status(500).json({ code: 500, message: err.message });
   }

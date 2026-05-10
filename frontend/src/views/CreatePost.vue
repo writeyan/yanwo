@@ -21,26 +21,45 @@
           placeholder="在此编写 Markdown 内容…"
         />
       </div>
-      <div class="form-row">
-        <div class="form-group form-group--half">
-          <label class="label" for="tags">标签</label>
-          <input
-            id="tags"
-            v-model="form.tagsStr"
-            class="input-text"
-            type="text"
-            placeholder="技术, 生活, 随笔"
-          />
-        </div>
-        <div class="form-group form-group--half">
-          <label class="label" for="img">封面图 URL</label>
-          <input
-            id="img"
-            v-model="form.featuredImage"
-            class="input-text"
-            type="url"
-            placeholder="https://"
-          />
+      <div class="form-group form-group--status-line">
+        <label class="label" for="cat">分类</label>
+        <select id="cat" v-model="form.categoryId" class="input-text select">
+          <option value="">不分类</option>
+          <option v-for="c in categories" :key="c._id" :value="c._id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="label" for="tags">标签</label>
+        <input
+          id="tags"
+          v-model="form.tagsStr"
+          class="input-text"
+          type="text"
+          placeholder="技术, 生活, 随笔"
+        />
+      </div>
+      <div class="form-group">
+        <label class="label" for="cover-file">封面图</label>
+        <input
+          id="cover-file"
+          type="file"
+          class="input-file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          :disabled="coverUploading"
+          @change="onCoverFile"
+        />
+        <p class="field-hint">可选：从本地上传 JPG / PNG / GIF / WebP，单张不超过 5MB；上传后会填入下方地址。</p>
+        <label class="label label--inline" for="img">或填写图片地址</label>
+        <input
+          id="img"
+          v-model="form.featuredImage"
+          class="input-text"
+          type="text"
+          autocomplete="off"
+          placeholder="https://… 或 /uploads/featured/…"
+        />
+        <div v-if="form.featuredImage" class="cover-preview-wrap">
+          <img :src="form.featuredImage" alt="封面预览" class="cover-preview" />
         </div>
       </div>
       <div class="form-group form-group--status">
@@ -61,16 +80,20 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createPost } from '../api/post'
+import { createPost, uploadPostCover } from '../api/post'
+import { getCategories } from '../api/category'
 
 const router = useRouter()
 const loading = ref(false)
+const coverUploading = ref(false)
+const categories = ref([])
 
 const form = reactive({
   title: '',
   content: '',
+  categoryId: '',
   tagsStr: '',
   featuredImage: '',
   status: 'published',
@@ -81,11 +104,27 @@ const goHome = () => {
   router.push('/')
 }
 
+const onCoverFile = async (e) => {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+  coverUploading.value = true
+  try {
+    const res = await uploadPostCover(file)
+    form.featuredImage = res.data.data?.featuredImage || form.featuredImage
+  } catch (err) {
+    alert(err.response?.data?.message || '封面上传失败')
+  } finally {
+    coverUploading.value = false
+  }
+}
+
 const submitPost = async () => {
   loading.value = true
   const data = {
     title: form.title,
     content: form.content,
+    category: form.categoryId || undefined,
     tags: form.tagsStr
       ? form.tagsStr
           .split(',')
@@ -104,6 +143,15 @@ const submitPost = async () => {
     loading.value = false
   }
 }
+
+onMounted(async () => {
+  try {
+    const res = await getCategories()
+    categories.value = res.data.data || []
+  } catch {
+    categories.value = []
+  }
+})
 </script>
 
 <style scoped>
@@ -147,20 +195,36 @@ const submitPost = async () => {
   resize: vertical;
   min-height: 12rem;
 }
-.form-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+.field-hint {
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+  margin: 0.35rem 0 0.5rem;
+  line-height: 1.5;
 }
-@media (min-width: 640px) {
-  .form-row {
-    flex-direction: row;
-    gap: 1rem;
-  }
-  .form-group--half {
-    flex: 1;
-    min-width: 0;
-  }
+.label--inline {
+  display: block;
+  margin-top: 0.65rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+.input-file {
+  font-size: 0.9rem;
+}
+.cover-preview-wrap {
+  margin-top: 0.65rem;
+}
+.cover-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  object-fit: contain;
+  background: var(--color-bg-muted, #f0ebe3);
+}
+.form-group--status-line {
+  max-width: 22rem;
 }
 .form-group--status {
   max-width: 14rem;
