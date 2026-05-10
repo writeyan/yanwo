@@ -24,7 +24,9 @@ const registerUser = async (req, res) => {
     if (!pwdCheck.ok) {
       return res.status(400).json({ code: 400, message: pwdCheck.message });
     }
-    const userExists = await User.findOne({ $or: [{ email: emailTrim }, { username: usernameTrim }] });
+    const userExists = await User.findOne({
+      $or: [{ email: emailTrim.toLowerCase() }, { username: usernameTrim }],
+    });
     if (userExists) {
       return res.status(400).json({ code: 400, message: '用户名或邮箱已存在' });
     }
@@ -50,8 +52,9 @@ const loginUser = async (req, res) => {
     if (!ident || !password) {
       return res.status(400).json({ code: 400, message: '请填写账号与密码' });
     }
+    // 邮箱在库中为小写（User schema lowercase）；登录输入需统一小写才能命中
     const user = await User.findOne({
-      $or: [{ email: ident }, { username: ident }],
+      $or: [{ username: ident }, { email: ident.toLowerCase() }],
     });
     if (user && (await user.comparePassword(password))) {
       if (user.status === 'disabled') {
@@ -251,7 +254,7 @@ const resetPasswordForgot = async (req, res) => {
       return res.status(400).json({ code: 400, message: pwdCheck.message });
     }
     const user = await User.findOne({
-      $or: [{ email: ident }, { username: ident }],
+      $or: [{ username: ident }, { email: ident.toLowerCase() }],
     });
     if (!user) {
       return res.status(404).json({ code: 404, message: '未找到该用户' });

@@ -2,10 +2,8 @@ const Category = require('../models/Category');
 const Post = require('../models/Post');
 const PostLike = require('../models/PostLike');
 const PostRevision = require('../models/PostRevision');
-const PageVisit = require('../models/PageVisit');
 const slugify = require('slugify');
 const { writeAudit } = require('../utils/auditLog');
-const { refererHostFromHeader } = require('../utils/refererHost');
 
 /** @returns {{ id?: import('mongoose').Types.ObjectId, err?: string }} */
 async function normalizeCategoryRef(categoryField) {
@@ -274,18 +272,6 @@ exports.getPostBySlug = async (req, res) => {
     }
     obj.likedByMe = likedByMe;
     obj.likeCount = obj.likeCount ?? 0;
-
-    const ref =
-      typeof req.get === 'function' ? req.get('referer') || req.get('referrer') || '' : '';
-    const refStr = String(ref).slice(0, 1000);
-    setImmediate(() => {
-      PageVisit.create({
-        path: `/post/${req.params.slug}`,
-        referer: refStr,
-        refererHost: refererHostFromHeader(refStr),
-        post: post._id,
-      }).catch(() => {});
-    });
 
     res.json({ code: 200, data: obj });
   } catch (err) {
