@@ -4,8 +4,10 @@
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id, role) => {
+  const rawExpire = String(process.env.JWT_EXPIRE || '').trim();
+  const expire = rawExpire || '7d';
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
+    expiresIn: expire
   });
 };
 
