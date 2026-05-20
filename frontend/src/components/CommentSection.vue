@@ -79,6 +79,7 @@
 </template>
 
 <script setup>
+/** 文章页评论区：分页列表、发表、回复、点赞状态 */
 import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getComments, createComment, toggleCommentLike, reportComment } from '../api/comment'

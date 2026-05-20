@@ -1,3 +1,10 @@
+/**
+ * 博客文章：标题、slug（URL 唯一）、正文、作者冗余名、分类、标签、状态与计数器。
+ *
+ * - status：draft | published | deleted（软删除）
+ * - 文本索引：title/content/excerpt 供 $text 搜索（无结果时控制器可回退正则）
+ * - publishedAt：首次发布或从草稿转发布时由控制器写入
+ */
 const mongoose = require('mongoose');
 
 const postSchema = new mongoose.Schema({

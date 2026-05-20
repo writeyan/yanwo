@@ -28,6 +28,7 @@ router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
 router.put('/password', protect, changePassword);
 
+// multer 错误（类型/大小）转为 JSON 400，避免默认 HTML 错误页
 router.post('/avatar', protect, (req, res, next) => {
   uploadAvatar.single('avatar')(req, res, (err) => {
     if (err) {

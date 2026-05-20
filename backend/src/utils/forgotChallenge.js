@@ -1,6 +1,8 @@
 /**
- * 简单算术验证码（内存存储，进程重启清空；适合单机部署）。
- * 不包含邮箱链路，仅凭账号 + 验证码重置密码。
+ * 简单算术验证码（内存 Map，单进程有效；重启即清空）。
+ *
+ * 用于「忘记密码」无邮件场景：客户端先拉题目，再带 challengeId + 答案提交重置接口。
+ * consumeChallenge 在错误次数过多时返回 locked，并删除该题防止暴力试答。
  */
 const crypto = require('crypto');
 
@@ -29,7 +31,10 @@ function createChallenge() {
   return { challengeId: id, question: `${a} + ${b} = ?` };
 }
 
-/** @returns {'ok'|'expired'|'wrong'|'locked'} */
+/**
+ * 校验并消费一次答题机会
+ * @returns {'ok'|'expired'|'wrong'|'locked'} ok 时条目已从 store 删除，可继续重置密码
+ */
 function consumeChallenge(challengeId, answerStr) {
   prune();
   if (!challengeId || answerStr === undefined || answerStr === null) return 'wrong';

@@ -46,6 +46,7 @@
 </template>
 
 <script setup>
+/** 忘记密码：算术验证码 + 账号重置（无邮件） */
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getForgotChallengeApi, forgotResetApi } from '../api/auth'

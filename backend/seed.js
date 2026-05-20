@@ -1,3 +1,9 @@
+/**
+ * 数据库种子脚本：创建演示管理员、默认分类与欢迎文章。
+ *
+ * 用法：在 backend 目录配置 `.env` 后执行 `node seed.js`。
+ * 若数据已存在则跳过对应步骤；结束时 `process.exit()`。
+ */
 const connectDB = require('./src/config/db');
 const User = require('./src/models/User');
 const Post = require('./src/models/Post');
@@ -8,7 +14,7 @@ const seed = async () => {
   try {
     await connectDB();
 
-    // 创建管理员
+    // 演示管理员（生产环境务必修改密码或禁用此脚本）
     let admin = await User.findOne({ email: 'admin@example.com' });
     if (!admin) {
       admin = await User.create({
@@ -33,7 +39,6 @@ const seed = async () => {
       console.log('✅ 默认分类「随笔」已创建');
     }
 
-    // 创建示例文章
     const existingPost = await Post.findOne({ slug: 'welcome-to-blog' });
     if (!existingPost) {
       await Post.create({

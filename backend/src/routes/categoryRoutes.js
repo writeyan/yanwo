@@ -1,3 +1,7 @@
+/**
+ * 分类路由：GET 公开；POST/PUT/DELETE 需登录且管理员。
+ * 挂载前缀：/api/v1/categories
+ */
 const express = require('express');
 const {
   getCategories,

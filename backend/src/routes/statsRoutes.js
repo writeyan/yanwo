@@ -1,5 +1,6 @@
 /**
- * 管理端统计：仪表盘、趋势、标签占比，均需 protect + admin。
+ * 管理端统计 API：仪表盘、发文趋势、标签占比、分类热力、评论情感。
+ * 均需 protect + admin。
  */
 const express = require('express');
 const {

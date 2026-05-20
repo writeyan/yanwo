@@ -30,6 +30,7 @@
 </template>
 
 <script setup>
+/** 标签归档：标签云与按标签筛选的文章列表 */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTagStats } from '../api/post'

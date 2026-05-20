@@ -1,3 +1,4 @@
+<!-- 登录 / 注册 / 忘记密码：全屏背景 + 居中卡片，子路由为具体表单页 -->
 <template>
   <div class="auth-layout">
     <div class="auth-layout__bg" aria-hidden="true" />

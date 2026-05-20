@@ -1,8 +1,8 @@
 /**
- * 文章路由。注意：具体路径需先于 /:slug 注册，避免 slug 与保留字冲突。
- * - 公开：列表、归档、标签、按 slug 读详情（optionalAuth 附加 likedByMe）
- * - 登录：创建、编辑、删除、我的列表、点赞、封面上传 POST /upload-cover
- * - 管理员：/admin/all
+ * 文章 REST 路由
+ *
+ * 静态路径（related、revisions、admin、mine、favorites、upload-cover、meta、archive）必须注册在 `/:slug` 之前，
+ * 否则会被误当作 slug。详情页使用 optionalAuth 以返回 likedByMe。
  */
 const express = require('express');
 const {
@@ -21,6 +21,7 @@ const {
   uploadFeaturedCover,
 } = require('../controllers/postController');
 const { togglePostLike } = require('../controllers/likeController');
+const { togglePostFavorite, getMyFavorites } = require('../controllers/favoriteController');
 const { protect, admin, optionalAuth } = require('../middleware/authMiddleware');
 const { uploadFeatured } = require('../middleware/uploadFeatured');
 
@@ -30,7 +31,9 @@ router.get('/related/:slug', getRelatedPosts);
 router.get('/revisions/:postId', protect, getPostRevisions);
 router.get('/admin/all', protect, admin, getAllPostsAdmin);
 router.get('/mine', protect, getMyPosts);
+router.get('/favorites', protect, getMyFavorites);
 router.post('/upload-cover', protect, (req, res, next) => {
+  // multer 校验失败时返回 JSON，避免默认 HTML 错误响应
   uploadFeatured.single('cover')(req, res, (err) => {
     if (err) {
       return res.status(400).json({ code: 400, message: err.message || '上传失败' });
@@ -45,6 +48,7 @@ router.post('/', protect, createPost);
 router.get('/:id/edit', protect, getPostById);
 router.put('/:id', protect, updatePost);
 router.post('/:id/like', protect, togglePostLike);
+router.post('/:id/favorite', protect, togglePostFavorite);
 router.delete('/:id', protect, deletePost);
 // optionalAuth：根据是否登录附加 likedByMe
 router.get('/:slug', optionalAuth, getPostBySlug);

@@ -1,3 +1,4 @@
+<!-- 管理后台：侧栏导航 + 顶栏用户区 + 主内容（需管理员，路由 meta 控制） -->
 <template>
   <div class="admin-layout">
     <aside class="admin-layout__aside" aria-label="后台导航">

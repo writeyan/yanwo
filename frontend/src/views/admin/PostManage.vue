@@ -54,6 +54,7 @@
 </template>
 
 <script setup>
+/** 文章管理：我的列表或管理员全量、筛选、删除 */
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAdminPosts, getMyPosts, deletePost as deletePostApi } from '../../api/post'

@@ -1,3 +1,6 @@
+/**
+ * 用户对已审核评论的举报；同一用户对同一评论仅允许一条（唯一索引 comment+reporter）。
+ */
 const mongoose = require('mongoose');
 
 const commentReportSchema = new mongoose.Schema(

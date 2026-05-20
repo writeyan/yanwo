@@ -75,6 +75,7 @@
 </template>
 
 <script setup>
+/** 单条评论展示与递归子回复；点赞、举报入口 */
 import { ref, watch } from 'vue'
 import CommentItem from './CommentItem.vue'
 

@@ -190,7 +190,7 @@
 
 
 <script setup>
-
+/** 个人中心：资料、改密、头像上传、文章统计 */
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import { useUserStore } from '../store/user'

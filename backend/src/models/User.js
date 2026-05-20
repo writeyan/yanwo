@@ -1,3 +1,10 @@
+/**
+ * 用户模型：注册登录、角色与状态、个人资料（头像/简介）。
+ *
+ * - email：unique + lowercase，登录时需 toLowerCase 匹配
+ * - password：pre-save 时若被修改则用 bcrypt 哈希（10 rounds）
+ * - comparePassword：登录/改密时校验明文与哈希
+ */
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 

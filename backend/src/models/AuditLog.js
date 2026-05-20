@@ -1,3 +1,6 @@
+/**
+ * 安全与合规审计：敏感操作（改密、删文、审核、举报等）写入一条记录，含 IP 与 UA。
+ */
 const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema(

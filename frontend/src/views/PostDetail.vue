@@ -49,7 +49,18 @@
               ♥
               <span class="post-like__n">{{ post.likeCount ?? 0 }}</span>
             </button>
-            <span v-if="!userStore.token" class="post-like-tip">登录后可点赞</span>
+            <button
+              type="button"
+              class="post-fav"
+              :class="{ 'post-fav--on': post.favoritedByMe }"
+              :disabled="postFavLoading"
+              :title="userStore.token ? (post.favoritedByMe ? '取消收藏' : '收藏') : '登录后收藏'"
+              @click="onPostFavorite"
+            >
+              ★
+              <span class="post-fav__label">{{ post.favoritedByMe ? '已收藏' : '收藏' }}</span>
+            </button>
+            <span v-if="!userStore.token" class="post-like-tip">登录后可点赞与收藏</span>
           </div>
         </header>
 
@@ -96,9 +107,10 @@
 </template>
 
 <script setup>
+/** 文章详情：正文、阅读量、点赞、相关推荐、评论区 */
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPostBySlug, togglePostLike, getRelatedPosts } from '../api/post'
+import { getPostBySlug, togglePostLike, togglePostFavorite, getRelatedPosts } from '../api/post'
 import { useUserStore } from '../store/user'
 import { marked } from 'marked'
 import CommentSection from '../components/CommentSection.vue'
@@ -113,6 +125,7 @@ const relatedPosts = ref([])
 const loadError = ref(false)
 const copyOk = ref(false)
 const postLikeLoading = ref(false)
+const postFavLoading = ref(false)
 let copyTimer = null
 
 const buildSlug = (text, exists) => {
@@ -218,6 +231,23 @@ const onPostLike = async () => {
     // 401 由 request 拦截
   } finally {
     postLikeLoading.value = false
+  }
+}
+
+const onPostFavorite = async () => {
+  if (!post.value?._id) return
+  if (!userStore.token) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  postFavLoading.value = true
+  try {
+    const res = await togglePostFavorite(post.value._id)
+    post.value.favoritedByMe = res.data.data.favorited
+  } catch {
+    // 401 由 request 拦截
+  } finally {
+    postFavLoading.value = false
   }
 }
 </script>
@@ -360,6 +390,37 @@ const onPostLike = async () => {
 .post-like__n {
   font-size: 0.88rem;
   font-weight: 600;
+}
+.post-fav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #fff;
+  color: #5c5c66;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.post-fav:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.post-fav:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.post-fav--on {
+  color: #8a6d1f;
+  border-color: #d4c48a;
+  background: #fffbeb;
+}
+.post-fav__label {
+  font-size: 0.88rem;
 }
 .post-like-tip {
   font-size: 0.85rem;

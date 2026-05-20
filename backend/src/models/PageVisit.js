@@ -1,3 +1,7 @@
+/**
+ * 页面访问记录（路径、来源 URL、解析后的 referer 主机、可选关联文章）。
+ * 可用于后续统计；当前部分仪表盘仍用发文量作代理指标。
+ */
 const mongoose = require('mongoose');
 
 const pageVisitSchema = new mongoose.Schema(

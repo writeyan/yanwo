@@ -1,4 +1,7 @@
-/** @returns {{ ok: boolean, message: string }} */
+/**
+ * 注册/改密共用的密码强度规则（与前端 formValidators 保持一致）。
+ * @returns {{ ok: boolean, message: string }}
+ */
 function validatePasswordStrength(password) {
   if (password == null || typeof password !== 'string') {
     return { ok: false, message: '请填写密码' };

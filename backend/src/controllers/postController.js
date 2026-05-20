@@ -1,11 +1,21 @@
+/**
+ * 文章控制器：公开列表/详情/归档/标签/相关文章；登录用户 CRUD、点赞、封面上传、修订历史；
+ * 管理员全量列表。软删除写审计。分类字段经 normalizeCategoryRef 校验为有效 ObjectId。
+ */
 const Category = require('../models/Category');
 const Post = require('../models/Post');
 const PostLike = require('../models/PostLike');
+const PostFavorite = require('../models/PostFavorite');
 const PostRevision = require('../models/PostRevision');
 const slugify = require('slugify');
 const { writeAudit } = require('../utils/auditLog');
 
-/** @returns {{ id?: import('mongoose').Types.ObjectId, err?: string }} */
+/**
+ * 将请求体中的 category 规范为 Category._id 或空
+ *
+ * @param {unknown} categoryField undefined/null 表示不传；空字符串表示清空
+ * @returns {Promise<{ id?: import('mongoose').Types.ObjectId, err?: string }>}
+ */
 async function normalizeCategoryRef(categoryField) {
   if (categoryField === undefined || categoryField === null) return {};
   const s = String(categoryField).trim();
@@ -65,6 +75,7 @@ exports.getTagStats = async (req, res) => {
   }
 };
 
+/** 列表排序：latest（默认）| popular | views */
 const sortFromQuery = (sortRaw) => {
   const s = String(sortRaw || 'latest').toLowerCase();
   if (s === 'popular') return { likeCount: -1, publishedAt: -1 };
@@ -266,11 +277,17 @@ exports.getPostBySlug = async (req, res) => {
     await post.save();
     const obj = post.toObject ? post.toObject() : post;
     let likedByMe = false;
+    let favoritedByMe = false;
     if (req.user) {
-      const like = await PostLike.findOne({ post: post._id, user: req.user._id }).lean();
+      const [like, fav] = await Promise.all([
+        PostLike.findOne({ post: post._id, user: req.user._id }).lean(),
+        PostFavorite.findOne({ post: post._id, user: req.user._id }).lean(),
+      ]);
       likedByMe = !!like;
+      favoritedByMe = !!fav;
     }
     obj.likedByMe = likedByMe;
+    obj.favoritedByMe = favoritedByMe;
     obj.likeCount = obj.likeCount ?? 0;
 
     res.json({ code: 200, data: obj });

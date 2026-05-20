@@ -1,5 +1,9 @@
 /**
- * Express 应用组装：全局中间件、静态目录、REST 路由挂载（统一前缀 /api/v1）。
+ * Express 应用组装
+ *
+ * 中间件顺序：helmet → cors → json → morgan → 静态 `/uploads` → 各 API 子路由 → 测试路由 → 500 兜底。
+ * API 版本前缀：`/api/v1` 下分模块挂载（auth、posts、comments、stats、categories、users）。
+ * `trust proxy`：部署在 Nginx 等反向代理后时，便于 `req.ip`、日志与限流识别真实客户端。
  */
 const path = require('path');
 const express = require('express');

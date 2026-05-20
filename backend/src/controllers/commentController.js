@@ -1,3 +1,7 @@
+/**
+ * 评论：前台按文章分页拉取、发表（登录即时通过 / 游客待审）、点赞、举报；
+ * 管理端待审列表与审核（通过/垃圾），并维护 Post.commentCount 与审计日志。
+ */
 const mongoose = require('mongoose');
 const Comment = require('../models/Comment');
 const CommentReport = require('../models/CommentReport');

@@ -1,3 +1,6 @@
+/**
+ * 文章每次保存前的标题与正文快照，用于编辑历史与回溯展示。
+ */
 const mongoose = require('mongoose');
 
 const postRevisionSchema = new mongoose.Schema(

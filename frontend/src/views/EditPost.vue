@@ -89,6 +89,7 @@
 </template>
 
 <script setup>
+/** 编辑文章：拉取草稿/已发布、保存时写入修订历史（后端） */
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPostByIdForEdit, updatePost, getPostRevisions, uploadPostCover } from '../api/post'

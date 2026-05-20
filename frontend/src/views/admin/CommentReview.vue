@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+/** 评论审核：待审列表、通过或标为垃圾 */
 import { onMounted, ref } from 'vue'
 import { getPendingComments, reviewComment } from '../../api/comment'
 

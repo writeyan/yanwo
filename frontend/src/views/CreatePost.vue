@@ -80,6 +80,7 @@
 </template>
 
 <script setup>
+/** 新建文章：Markdown/元数据、封面上传、发布或草稿 */
 import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { createPost, uploadPostCover } from '../api/post'

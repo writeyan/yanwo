@@ -1,6 +1,8 @@
 /**
- * 前端路由表：站点前台（SiteLayout）、认证页（AuthLayout）、管理后台（AdminLayout）。
- * meta.requiresAuth：需登录；meta.requiresAdmin：需角色为 admin。守卫内做跳转与 redirect 回跳。
+ * 路由与导航守卫
+ *
+ * 站点前台使用 SiteLayout；/login、/register、/forgot-password 使用 AuthLayout；
+ * /admin/* 使用 AdminLayout 且 meta.requiresAdmin。守卫根据 Pinia 中 token 与 role 跳转。
  */
 import { createRouter, createWebHistory } from 'vue-router'
 import SiteLayout from '../layouts/SiteLayout.vue'
@@ -13,6 +15,7 @@ import EditPost from '../views/EditPost.vue'
 import TagArchive from '../views/TagArchive.vue'
 import Archive from '../views/Archive.vue'
 import UserProfile from '../views/UserProfile.vue'
+import Favorites from '../views/Favorites.vue'
 import Login from '../views/login.vue'
 import Register from '../views/Register.vue'
 import ForgotPassword from '../views/ForgotPassword.vue'
@@ -51,6 +54,7 @@ const routes = [
       { path: 'tags', name: 'tags', component: TagArchive },
       { path: 'archive', name: 'archive', component: Archive },
       { path: 'me', name: 'me', component: UserProfile, meta: { requiresAuth: true } },
+      { path: 'favorites', name: 'favorites', component: Favorites, meta: { requiresAuth: true } },
     ],
   },
   {

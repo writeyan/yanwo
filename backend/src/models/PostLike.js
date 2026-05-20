@@ -1,3 +1,6 @@
+/**
+ * 用户对文章的点赞关系；复合唯一索引防止同一用户对同一文章重复点赞。
+ */
 const mongoose = require('mongoose');
 
 const postLikeSchema = new mongoose.Schema(

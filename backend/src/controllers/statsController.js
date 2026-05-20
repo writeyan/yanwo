@@ -1,7 +1,14 @@
+/**
+ * 管理后台数据统计接口（需 protect + admin）
+ *
+ * 含：仪表盘汇总、发文趋势、标签占比、分类×月份热力、评论情感（简单词表规则）。
+ * 部分图表使用「发文量」代理「访问量」，见各函数内说明。
+ */
 const Post = require('../models/Post');
 const User = require('../models/User');
 const Comment = require('../models/Comment');
 
+/** 情感分析：命中正向词计 +1（每条评论独立计分，非分词级） */
 const POSITIVE_WORDS = [
   '好',
   '喜欢',
@@ -14,6 +21,7 @@ const POSITIVE_WORDS = [
   '精彩',
   '牛',
 ];
+/** 情感分析：命中负向词计 -1 */
 const NEGATIVE_WORDS = [
   '差',
   '垃圾',
@@ -27,6 +35,7 @@ const NEGATIVE_WORDS = [
   '无语',
 ];
 
+/** 仪表盘：文章总数、用户总数、待审评论数、近 7 日有登录记录的用户数 */
 exports.getDashboardStats = async (req, res) => {
   try {
     const sevenDaysAgo = new Date();
@@ -51,7 +60,7 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// 以「每日新发布文章数」为趋势（可后续接独立访问日志）
+/** 近 30 日按天聚合「新发布文章数」（非真实 PV；可后续接 PageVisit 或埋点） */
 exports.getVisitTrend = async (req, res) => {
   try {
     const thirtyDaysAgo = new Date();
@@ -73,7 +82,7 @@ exports.getVisitTrend = async (req, res) => {
   }
 };
 
-// 标签占比（已发布文章的标签出现次数占比）
+/** 已发布文章标签词频 Top 12，用于饼图/条形图 */
 exports.getTagRatio = async (req, res) => {
   try {
     const rows = await Post.aggregate([
@@ -90,7 +99,7 @@ exports.getTagRatio = async (req, res) => {
   }
 };
 
-// 分类活跃热力图（近 12 个月：分类 × 月份发文量）
+/** 近 12 个自然月 × 分类发文量；lookup categories 取名称，无分类显示「未分类」 */
 exports.getCategoryHeatmap = async (req, res) => {
   try {
     const months = [];
@@ -175,7 +184,7 @@ exports.getCategoryHeatmap = async (req, res) => {
   }
 };
 
-// 评论情感分析（规则法，近 90 天已审核评论）
+/** 近 90 天已审核评论：按 POSITIVE/NEGATIVE 词表打分，分为正/中/负三档 */
 exports.getCommentSentiment = async (req, res) => {
   try {
     const since = new Date();

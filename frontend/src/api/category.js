@@ -1,3 +1,6 @@
+/**
+ * 分类 API：与后端 `/api/v1/categories` 对齐；写操作需管理员，由后端鉴权。
+ */
 import request from './request'
 
 export const getCategories = () => request.get('/categories')

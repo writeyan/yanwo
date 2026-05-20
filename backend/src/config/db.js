@@ -1,5 +1,9 @@
 /**
- * MongoDB 连接：使用环境变量 MONGO_URI，失败则退出进程。
+ * MongoDB（Mongoose）连接封装
+ *
+ * - 连接串来自环境变量 `MONGO_URI`（需在 .env 中配置）
+ * - 成功时打印连接主机名，便于部署排查
+ * - 失败时打印错误并 `process.exit(1)`，避免无数据库状态下继续提供服务
  */
 const mongoose = require('mongoose');
 

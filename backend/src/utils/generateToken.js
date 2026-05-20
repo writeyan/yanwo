@@ -1,5 +1,8 @@
 /**
- * 签发 JWT：载荷含用户 id 与 role，密钥与过期时间来自环境变量。
+ * JWT 签发：载荷含用户 id 与 role，供 protect/optionalAuth 中间件还原用户。
+ *
+ * - 密钥：`JWT_SECRET`（必填，否则 verify 会失败）
+ * - 过期：`JWT_EXPIRE`，缺省 `7d`（jsonwebtoken 支持的 expiresIn 格式）
  */
 const jwt = require('jsonwebtoken');
 

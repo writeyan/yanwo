@@ -1,6 +1,11 @@
+/**
+ * 用户管理（管理员）
+ *
+ * 列表支持分页与 q 模糊搜索；PATCH 可改 role、status。未实现「至少保留一名管理员」等业务约束。
+ */
 const User = require('../models/User');
 
-/** 极简用户列表：分页 + 关键字（用户名或邮箱模糊） */
+/** 分页用户列表；q 对 username、email 做不区分大小写正则匹配（已转义特殊字符） */
 exports.listUsersAdmin = async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -33,7 +38,7 @@ exports.listUsersAdmin = async (req, res) => {
   }
 };
 
-/** 禁用/解禁、修改角色（不校验「最后一个管理员」——论文演示足够） */
+/** 部分更新：status ∈ active|disabled，role ∈ reader|author|admin */
 exports.patchUserAdmin = async (req, res) => {
   try {
     const { id } = req.params;

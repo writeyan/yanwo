@@ -1,7 +1,8 @@
 /**
- * 全局 Axios 实例：所有 src/api/*.js 经此访问后端。
- * baseURL 指向 /api/v1，开发时由 Vite 代理到本机 Express（见 vite.config.js）。
- * 请求自动附带 localStorage 中的 JWT；非登录/注册接口在 401 时清理登录态并跳转登录页。
+ * Axios 封装
+ *
+ * baseURL 默认 `/api/v1`，开发环境由 Vite 代理到 Express（vite.config.js）。
+ * 请求拦截器附带 Bearer token；响应 401 时对非登录/注册请求清理本地会话并跳转登录页（带 redirect）。
  */
 import axios from 'axios'
 

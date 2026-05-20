@@ -1,9 +1,17 @@
+/**
+ * 文章点赞 / 评论点赞（切换式）
+ *
+ * 使用 PostLike、CommentLike 唯一索引 (user, post/comment) 防重复点赞。
+ * Post/Comment 上的 likeCount 与关联表同步增减；若出现负数则钳制回 0。
+ * 并发下 create 可能撞唯一索引，捕获 11000 后返回当前态幂等响应。
+ */
 const mongoose = require('mongoose');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const PostLike = require('../models/PostLike');
 const CommentLike = require('../models/CommentLike');
 
+/** 严格 24 位十六进制 ObjectId，避免把任意字符串当 ObjectId 查询 */
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id) && String(id).length === 24;
 
 exports.togglePostLike = async (req, res) => {

@@ -111,6 +111,7 @@
 </template>
 
 <script setup>
+/** 首页：文章列表、分类筛选、排序与分页 */
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPosts } from '../api/post'

@@ -1,3 +1,6 @@
+/**
+ * 用户对评论的点赞关系；复合唯一索引防重复。
+ */
 const mongoose = require('mongoose');
 
 const commentLikeSchema = new mongoose.Schema(

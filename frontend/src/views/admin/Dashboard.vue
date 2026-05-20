@@ -96,6 +96,7 @@
 </template>
 
 <script setup>
+/** 管理仪表盘：ECharts 展示后端统计接口数据 */
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { useUserStore } from '../../store/user'

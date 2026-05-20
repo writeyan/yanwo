@@ -35,6 +35,7 @@
 </template>
 
 <script setup>
+/** 注册：前端校验与注册 API，成功后跳转登录 */
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerApi } from '../api/auth'

@@ -1,3 +1,12 @@
+/**
+ * 用户头像上传（Multer 磁盘存储）
+ *
+ * - 目录：`backend/uploads/avatars`（启动时 ensureDir）
+ * - 文件名：时间戳 + 随机串 + 安全扩展名（非白名单扩展则回退为 .jpg）
+ * - 限制：单文件最大 2MB；MIME 仅 JPEG / PNG / GIF / WebP
+ *
+ * 路由中应使用 `uploadAvatar.single('avatar')`，与 authController 约定字段名一致。
+ */
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -6,7 +15,7 @@ const uploadDir = path.join(__dirname, '../../uploads/avatars');
 try {
   fs.mkdirSync(uploadDir, { recursive: true });
 } catch {
-  // ignore
+  // 目录已存在或权限问题时忽略；multer 写入时再暴露错误
 }
 
 const storage = multer.diskStorage({

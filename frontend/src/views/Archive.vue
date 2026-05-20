@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+/** 时间归档：按年/按月分组展示已发布文章 */
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { getArchive } from '../api/post'

@@ -1,3 +1,7 @@
+/**
+ * 遗留示例文件：内含 JWT protect/admin 雏形，当前项目未引用。
+ * 实际鉴权请使用 `src/middleware/authMiddleware.js`（含 optionalAuth）。
+ */
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 

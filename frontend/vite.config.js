@@ -1,5 +1,8 @@
 /**
- * Vite 配置：开发服务器将 /api、/uploads 代理到后端（默认 localhost:5000），避免跨域。
+ * Vite 开发服务器配置
+ *
+ * `/api`、`/uploads` 代理到后端（默认 localhost:5000），浏览器同源请求无 CORS。
+ * `Cache-Control: no-store` 降低开发时缓存干扰。
  */
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'

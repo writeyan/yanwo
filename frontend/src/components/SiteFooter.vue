@@ -12,6 +12,7 @@
 </template>
 
 <script setup>
+/** 站点页脚：展示版权年份 */
 const year = new Date().getFullYear()
 </script>
 

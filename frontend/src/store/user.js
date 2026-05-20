@@ -1,5 +1,7 @@
 /**
- * 当前登录用户状态：token 与 userInfo 与 localStorage 同步，刷新页面后可恢复会话。
+ * 用户会话（Pinia）
+ *
+ * token、userInfo 与 localStorage 同步，便于刷新后恢复；logout 清理两处存储。
  */
 import { defineStore } from 'pinia'
 

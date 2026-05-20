@@ -45,6 +45,7 @@
 </template>
 
 <script setup>
+/** 分类管理：CRUD 与表格编辑 */
 import { ref, onMounted, reactive } from 'vue'
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../../api/category'
 

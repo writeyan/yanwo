@@ -50,6 +50,7 @@
 </template>
 
 <script setup>
+/** 用户管理：分页、搜索、禁用与角色修改 */
 import { ref, onMounted } from 'vue'
 import { listUsersAdmin, patchUserAdmin } from '../../api/users'
 

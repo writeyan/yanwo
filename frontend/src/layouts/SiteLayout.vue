@@ -13,6 +13,7 @@
 </template>
 
 <script setup>
+/** 站点主布局：顶栏 + 主内容区 + 页脚，子路由渲染于主区 */
 import SiteHeader from '../components/SiteHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 </script>

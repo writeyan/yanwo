@@ -1,3 +1,13 @@
+/**
+ * 文章封面图上传（Multer 磁盘存储）
+ *
+ * - 目录：`backend/uploads/featured`
+ * - 命名与头像策略相同（时间戳 + 随机 + 安全扩展名）
+ * - 单文件上限 5MB（大于头像）；MIME 限制与头像一致
+ *
+ * 上传成功后由 postController.uploadFeaturedCover 返回 `/uploads/featured/...` 路径，
+ * 前端在保存文章时把该路径写入 `featuredImage` 字段。
+ */
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -18,7 +28,6 @@ const storage = multer.diskStorage({
   },
 });
 
-/** 文章封面图：存于 /uploads/featured，单张最大 5MB */
 const uploadFeatured = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },

@@ -1,11 +1,18 @@
+/**
+ * 文章分类 CRUD（管理员写、公开读）
+ *
+ * slug 由名称经 slugify 生成，用于前台按分类筛选文章；name/slug 在模型层唯一索引。
+ */
 const Category = require('../models/Category');
 const slugify = require('slugify');
 
+/** 公开：全部分类，按名称排序 */
 exports.getCategories = async (req, res) => {
   const categories = await Category.find().sort('name');
   res.json({ code: 200, data: categories });
 };
 
+/** 管理员：创建分类；重复 name/slug 时 Mongo 抛 11000 */
 exports.createCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -26,6 +33,7 @@ exports.createCategory = async (req, res) => {
   }
 };
 
+/** 管理员：按 ID 更新名称（会重算 slug）或描述 */
 exports.updateCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
@@ -48,6 +56,7 @@ exports.updateCategory = async (req, res) => {
   }
 };
 
+/** 管理员：删除分类；若仍有 Post 引用该分类则拒绝，避免孤儿数据 */
 exports.deleteCategory = async (req, res) => {
   try {
     const Post = require('../models/Post');

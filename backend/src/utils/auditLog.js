@@ -1,13 +1,16 @@
+/**
+ * 审计日志写入：失败仅打 console，不阻断主业务流程。
+ */
 const AuditLog = require('../models/AuditLog');
 
 /**
  * @param {object} opts
- * @param {import('mongoose').Types.ObjectId} [opts.user]
- * @param {string} opts.action
- * @param {string} [opts.resourceType]
- * @param {string} [opts.resourceId]
- * @param {object} [opts.meta]
- * @param {import('express').Request} [opts.req]
+ * @param {import('mongoose').Types.ObjectId} [opts.user] 操作者（可为空）
+ * @param {string} opts.action 动作标识，如 auth.change_password
+ * @param {string} [opts.resourceType] 资源类型
+ * @param {string} [opts.resourceId] 资源主键字符串
+ * @param {object} [opts.meta] 任意附加 JSON
+ * @param {import('express').Request} [opts.req] 用于提取 IP、User-Agent
  */
 async function writeAudit(opts) {
   try {

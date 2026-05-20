@@ -40,6 +40,13 @@
           :class="{ 'nav__link--active': isMyPosts }"
         >我的文章</router-link
         >
+        <router-link
+          v-if="userStore.token"
+          to="/favorites"
+          class="nav__link"
+          :class="{ 'nav__link--active': isFavorites }"
+        >收藏</router-link
+        >
       </nav>
 
       <form class="search" @submit.prevent="onSearch" role="search" aria-label="全站文章搜索">
@@ -85,6 +92,7 @@
 </template>
 
 <script setup>
+/** 顶栏：导航、搜索、登录态与下拉菜单 */
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
@@ -100,6 +108,7 @@ const isTags = computed(() => route.path === '/tags')
 const isArchive = computed(() => route.path === '/archive')
 const isCreate = computed(() => route.path === '/create')
 const isMyPosts = computed(() => route.path === '/my-posts')
+const isFavorites = computed(() => route.path === '/favorites')
 
 watch(
   () => [route.path, route.query.q, route.query.tag],

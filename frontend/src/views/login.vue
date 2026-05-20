@@ -42,6 +42,7 @@
 </template>
 
 <script setup>
+/** 登录：支持 redirect 回跳；错误信息展示 */
 import { reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'

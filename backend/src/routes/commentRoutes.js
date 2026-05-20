@@ -1,6 +1,6 @@
 /**
- * 评论路由：按文章拉取列表、发表（optionalAuth）、点赞、举报；管理员待审与审核。
- * 挂载前缀：/api/v1/comments
+ * 评论路由：按文章拉取（可选登录以标记 likedByMe）、发表（游客 optionalAuth）、点赞与举报需登录；
+ * 管理员待审列表与 PATCH 审核。注意 POST `/` 与 POST `/:id/like` 的路径顺序由 Express 按注册顺序匹配。
  */
 const express = require('express');
 const { getCommentsByPost, createComment, getPendingComments, reviewComment, reportComment } = require('../controllers/commentController');
